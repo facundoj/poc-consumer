@@ -1,6 +1,7 @@
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.spark.SparkConf;
+import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.Function2;
 import org.apache.spark.api.java.function.PairFlatMapFunction;
 import org.apache.spark.api.java.function.PairFunction;
@@ -91,14 +92,11 @@ public class POCConsumer {
 
                 return null;
             }
+        }).filter(new Function<Tuple2<String, Tuple2<String, Iterable<String>>>, Boolean>() {
+            public Boolean call(Tuple2<String, Tuple2<String, Iterable<String>>> value) throws Exception {
+                return value != null;
+            }
         });
-
-//        (4775862.0-43429.0,(std1,[1695.0]))
-//        (4775862.0-43431.0,(std1,[1697.0]))
-//        (4775862.0-43428.0,(std1,[1694.0]))
-//        (4775862.0-43430.0,(std1,[1696.0]))
-//        (4775862.0-43433.0,(std1,[1698.0]))
-//        (4775862.0-43432.0,(std1,[1690.0]))
 
         // results -- (key, (usr, (obtained, total)))
         JavaPairDStream<String, Tuple2<String, Tuple2<Double, Double>>> resultsStream = caliperEvents.mapToPair(new PairFunction<Tuple2<String, String>, String, Tuple2<String, Tuple2<Double, Double>>>() {
@@ -127,6 +125,10 @@ public class POCConsumer {
                     );
                 }
                 return null;
+            }
+        }).filter(new Function<Tuple2<String, Tuple2<String, Tuple2<Double, Double>>>, Boolean>() {
+            public Boolean call(Tuple2<String, Tuple2<String, Tuple2<Double, Double>>> value) throws Exception {
+                return value != null;
             }
         });
 
@@ -164,7 +166,7 @@ public class POCConsumer {
             }
         });
 
-        resultsStream.print();
+        result.print();
 
         // END: Running total - Spark logic ************************************
 
