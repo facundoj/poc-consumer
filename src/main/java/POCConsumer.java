@@ -10,7 +10,10 @@ import org.apache.spark.streaming.api.java.JavaPairReceiverInputDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
 import org.apache.spark.streaming.kafka.KafkaUtils;
 import org.codehaus.jackson.JsonProcessingException;
+import org.imsglobal.caliper.entities.Entity;
 import org.imsglobal.caliper.entities.LearningObjective;
+import org.imsglobal.caliper.entities.Targetable;
+import org.imsglobal.caliper.entities.assessment.Assessment;
 import org.imsglobal.caliper.entities.assessment.AssessmentItem;
 import org.imsglobal.caliper.entities.assignable.Attempt;
 import org.imsglobal.caliper.entities.outcome.Result;
@@ -35,7 +38,7 @@ import java.util.Map;
  spark-submit \
  --driver-class-path /home/cloudera/infra/spark-1.3.0-jars/htrace-core-3.1.0-incubating.jar \
  --conf spark.executor.extraClassPath="/opt/cloudera/parcels/CDH-<CDH_VERSION>/lib/hive/lib/*" \
- --jars /home/cloudera/infra/spark-1.3.0-jars/spark-streaming-kafka-assembly_2.10-1.3.0.jar \
+ --jars /home/cloudera/infra/spark-1.3.0-jars/spark-streaming-kafka-assembly_2.10-1.3.0.jar,caliper-java-1.0.0.jar \
  --class POCConsumer --master local ecs-1.0-SNAPSHOT.jar \
  <zookeeper> <consumer-group>
  */
@@ -90,6 +93,13 @@ public class POCConsumer {
             }
         });
 
+//        (4775862.0-43429.0,(std1,[1695.0]))
+//        (4775862.0-43431.0,(std1,[1697.0]))
+//        (4775862.0-43428.0,(std1,[1694.0]))
+//        (4775862.0-43430.0,(std1,[1696.0]))
+//        (4775862.0-43433.0,(std1,[1698.0]))
+//        (4775862.0-43432.0,(std1,[1690.0]))
+
         // results -- (key, (usr, (obtained, total)))
         JavaPairDStream<String, Tuple2<String, Tuple2<Double, Double>>> resultsStream = caliperEvents.mapToPair(new PairFunction<Tuple2<String, String>, String, Tuple2<String, Tuple2<Double, Double>>>() {
             public Tuple2<String, Tuple2<String, Tuple2<Double, Double>>> call(Tuple2<String, String> msg) throws Exception {
@@ -99,7 +109,7 @@ public class POCConsumer {
                 if (EventType.OUTCOME.getValue().equals(event.getType())) {
                     OutcomeEvent oEvent = (OutcomeEvent) event;
                     Attempt attempt = (Attempt) oEvent.getObject();
-                    AssessmentItem ai = (AssessmentItem) oEvent.getTarget();
+                    Entity ai = (Entity) oEvent.getTarget();
                     Result result = (Result) oEvent.getGenerated();
 
                     // key: {attemptId}-{itemId}
@@ -154,7 +164,7 @@ public class POCConsumer {
             }
         });
 
-        result.print();
+        resultsStream.print();
 
         // END: Running total - Spark logic ************************************
 
