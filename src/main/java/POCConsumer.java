@@ -13,8 +13,6 @@ import org.apache.spark.streaming.kafka.KafkaUtils;
 import org.codehaus.jackson.JsonProcessingException;
 import org.imsglobal.caliper.entities.Entity;
 import org.imsglobal.caliper.entities.LearningObjective;
-import org.imsglobal.caliper.entities.Targetable;
-import org.imsglobal.caliper.entities.assessment.Assessment;
 import org.imsglobal.caliper.entities.assessment.AssessmentItem;
 import org.imsglobal.caliper.entities.assignable.Attempt;
 import org.imsglobal.caliper.entities.outcome.Result;
