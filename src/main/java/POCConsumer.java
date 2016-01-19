@@ -1,24 +1,17 @@
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.spark.SparkConf;
-import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.Function2;
 import org.apache.spark.api.java.function.PairFlatMapFunction;
-import org.apache.spark.api.java.function.PairFunction;
 import org.apache.spark.streaming.Duration;
 import org.apache.spark.streaming.api.java.JavaPairDStream;
 import org.apache.spark.streaming.api.java.JavaPairReceiverInputDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
 import org.apache.spark.streaming.kafka.KafkaUtils;
 import org.codehaus.jackson.JsonProcessingException;
-import org.imsglobal.caliper.entities.BaseEntity;
-import org.imsglobal.caliper.entities.Entity;
+import org.imsglobal.caliper.entities.DigitalResource;
 import org.imsglobal.caliper.entities.LearningObjective;
-import org.imsglobal.caliper.entities.assessment.AssessmentItem;
-import org.imsglobal.caliper.entities.assignable.Attempt;
 import org.imsglobal.caliper.entities.outcome.Result;
-import org.imsglobal.caliper.entities.response.Response;
-import org.imsglobal.caliper.events.AssessmentItemEvent;
 import org.imsglobal.caliper.events.BaseEventContext;
 import org.imsglobal.caliper.events.EventType;
 import org.imsglobal.caliper.events.OutcomeEvent;
@@ -31,7 +24,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 /**
  * Usage:
  *
@@ -50,7 +42,7 @@ public class POCConsumer {
         }
 
         SparkConf conf = new SparkConf().setMaster("local[2]").setAppName("POCConsumer");
-        JavaStreamingContext jssc = new JavaStreamingContext(conf, new Duration(5000));
+        JavaStreamingContext jssc = new JavaStreamingContext(conf, new Duration(250));
 
         // Topics map
         Map<String, Integer> topics = new HashMap<String, Integer>();
@@ -64,15 +56,24 @@ public class POCConsumer {
         // flattenResult -- ((usr, lo), (obtained, total))
         JavaPairDStream<Tuple2<String, String>, Tuple2<Double, Double>> flattenResult = caliperEvents.flatMapToPair(new PairFlatMapFunction<Tuple2<String, String>, Tuple2<String, String>, Tuple2<Double, Double>>() {
             public Iterable<Tuple2<Tuple2<String, String>, Tuple2<Double, Double>>> call(Tuple2<String, String> message) throws Exception {
+                // Caliper Model
                 BaseEventContext event = getCaliperModel(message._2());
+                // Map output
                 List<Tuple2<Tuple2<String, String>, Tuple2<Double, Double>>> output = new ArrayList<Tuple2<Tuple2<String, String>, Tuple2<Double, Double>>>();
 
+                if (event == null) return null;
+
+                // OutcomeEvents only
                 if (EventType.OUTCOME.getValue().equals(event.getType())) {
                     OutcomeEvent oEvent = (OutcomeEvent) event;
                     String student = oEvent.getActor().getId();
                     Result result = (Result) oEvent.getGenerated();
 
-                    for (LearningObjective lo : result.getAssignable().getLearningObjectives()) {
+                    if (result == null) return null;
+
+                    DigitalResource assessmentItem = result.getAssignable();
+
+                    for (LearningObjective lo : assessmentItem.getLearningObjectives()) {
                         output.add(new Tuple2<Tuple2<String, String>, Tuple2<Double, Double>>(
                                 new Tuple2<String, String>(student, lo.getId()), // (usr, lo)
                                 new Tuple2<Double, Double>(result.getNormalScore(), result.getTotalScore()) // (obtained, total)
