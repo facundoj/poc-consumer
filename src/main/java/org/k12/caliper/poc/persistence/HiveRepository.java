@@ -34,11 +34,12 @@ public class HiveRepository {
         // The schema is encoded in a string
         String schemaString = "user type_event text";
 
-        // Generate the schema based on the string of schema
+        // Quick and dirty
         List<StructField> fields = new ArrayList<StructField>();
-        for (String fieldName: schemaString.split(" ")) {
-            fields.add(DataTypes.createStructField(fieldName, DataTypes.StringType, false));
-        }
+        fields.add(DataTypes.createStructField("student_id", DataTypes.StringType, false));
+        fields.add(DataTypes.createStructField("objective_id", DataTypes.StringType, false));
+        fields.add(DataTypes.createStructField("obtained_score", DataTypes.DoubleType, false));
+        fields.add(DataTypes.createStructField("total_score", DataTypes.DoubleType, false));
 
         return DataTypes.createStructType(fields);
     }
