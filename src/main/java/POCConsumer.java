@@ -1,9 +1,18 @@
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.spark.SparkConf;
+import org.apache.spark.SparkContext;
+import org.apache.spark.api.java.JavaPairRDD;
+import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.Function2;
 import org.apache.spark.api.java.function.PairFlatMapFunction;
+import org.apache.spark.sql.DataFrame;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SaveMode;
+import org.apache.spark.sql.hive.HiveContext;
 import org.apache.spark.streaming.Duration;
+import org.apache.spark.streaming.Time;
 import org.apache.spark.streaming.api.java.JavaPairDStream;
 import org.apache.spark.streaming.api.java.JavaPairReceiverInputDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
@@ -17,6 +26,9 @@ import org.imsglobal.caliper.events.EventType;
 import org.imsglobal.caliper.events.OutcomeEvent;
 import org.k12.caliper.poc.parser.CaliperParser;
 import org.k12.caliper.poc.parser.CaliperParserFactory;
+import org.k12.caliper.poc.persistence.HiveContextSingleton;
+import org.k12.caliper.poc.persistence.HiveRepository;
+import org.k12.caliper.poc.persistence.StudentPerformanceRow;
 import scala.Tuple2;
 
 import java.io.IOException;
@@ -69,6 +81,8 @@ public class POCConsumer {
                     String student = oEvent.getActor().getId();
                     Result result = (Result) oEvent.getGenerated();
 
+
+
                     if (result == null) return null;
 
                     DigitalResource assessmentItem = result.getAssignable();
@@ -95,7 +109,42 @@ public class POCConsumer {
             }
         });
 
-        result.print();
+        //result.print();
+
+        // Quick and dirty persist to hive
+
+        // This method is deprecated with this parameters, but it is the way to do it according to the docs for this
+        // spark version (1.3.0)
+        result.foreachRDD(
+                new Function2<JavaPairRDD<Tuple2<String, String>, Tuple2<Double, Double>>, Time, Void>() {
+                    public Void call(JavaPairRDD<Tuple2<String, String>, Tuple2<Double, Double>> tuple2Tuple2JavaPairRDD, Time time) throws Exception {
+                        HiveContext hiveContext = HiveContextSingleton.getInstance(tuple2Tuple2JavaPairRDD.context());
+
+                        // Convert RDD to serializable
+                        JavaRDD<StudentPerformanceRow> rowRDD = tuple2Tuple2JavaPairRDD.map(new Function<Tuple2<Tuple2<String, String>, Tuple2<Double, Double>>, StudentPerformanceRow>() {
+                            public StudentPerformanceRow call(Tuple2<Tuple2<String, String>, Tuple2<Double, Double>> tuple2Tuple2Tuple2) throws Exception {
+                                StudentPerformanceRow studentPerformanceRow = new StudentPerformanceRow();
+                                studentPerformanceRow.setStudent_id(tuple2Tuple2Tuple2._1()._1());
+                                studentPerformanceRow.setObjective_id(tuple2Tuple2Tuple2._1()._2());
+                                studentPerformanceRow.setObtained_score(tuple2Tuple2Tuple2._2()._1());
+                                studentPerformanceRow.setTotal_score(tuple2Tuple2Tuple2._2()._2());
+                                return studentPerformanceRow;
+                            }
+                        });
+
+                        // Create data frame and insert it into the destination table
+                        DataFrame studentPerformanceFrame = hiveContext.createDataFrame(rowRDD, StudentPerformanceRow.class);
+                        //studentPerformanceFrame.show();
+                        for (Row s : studentPerformanceFrame.collect()) {
+                            System.out.println(s.toString());
+                        }
+                        studentPerformanceFrame.insertInto("student_performance");
+                        //studentPerformanceFrame.saveAsTable("simple_student_performance", "parquet", SaveMode.Append);
+                        return null;
+                    }
+                }
+        );
+
 
         // END: Running total - Spark logic ************************************
 
