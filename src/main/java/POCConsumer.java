@@ -107,16 +107,16 @@ public class POCConsumer {
             }
         });
 
-        //result.print();
-
-        // Quick and dirty persist to hive
-
-        // This method is deprecated with this parameters, but it is the way to do it according to the docs for this
+        // This method is deprecated with these parameters, but it is the way to do it according to the docs for this
         // spark version (1.3.0)
         result.foreachRDD(
                 new Function2<JavaPairRDD<Tuple2<String, String>, Tuple2<Double, Double>>, Time, Void>() {
                     public Void call(JavaPairRDD<Tuple2<String, String>, Tuple2<Double, Double>> tuple2Tuple2JavaPairRDD, Time time) throws Exception {
                         HiveContext hiveContext = HiveContextSingleton.getInstance(tuple2Tuple2JavaPairRDD.context());
+
+                        if (tuple2Tuple2JavaPairRDD.count() == 0) {
+                            return null;
+                        }
 
                         // Convert RDD to serializable
                         JavaRDD<StudentPerformanceRow> rowRDD = tuple2Tuple2JavaPairRDD.map(new Function<Tuple2<Tuple2<String, String>, Tuple2<Double, Double>>, StudentPerformanceRow>() {
