@@ -1,7 +1,6 @@
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.spark.SparkConf;
-import org.apache.spark.SparkContext;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.function.Function;
@@ -9,7 +8,6 @@ import org.apache.spark.api.java.function.Function2;
 import org.apache.spark.api.java.function.PairFlatMapFunction;
 import org.apache.spark.sql.DataFrame;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.hive.HiveContext;
 import org.apache.spark.streaming.Duration;
 import org.apache.spark.streaming.Time;
@@ -27,7 +25,6 @@ import org.imsglobal.caliper.events.OutcomeEvent;
 import org.k12.caliper.poc.parser.CaliperParser;
 import org.k12.caliper.poc.parser.CaliperParserFactory;
 import org.k12.caliper.poc.persistence.HiveContextSingleton;
-import org.k12.caliper.poc.persistence.HiveRepository;
 import org.k12.caliper.poc.persistence.StudentPerformanceRow;
 import scala.Tuple2;
 
@@ -124,22 +121,20 @@ public class POCConsumer {
                         JavaRDD<StudentPerformanceRow> rowRDD = tuple2Tuple2JavaPairRDD.map(new Function<Tuple2<Tuple2<String, String>, Tuple2<Double, Double>>, StudentPerformanceRow>() {
                             public StudentPerformanceRow call(Tuple2<Tuple2<String, String>, Tuple2<Double, Double>> tuple2Tuple2Tuple2) throws Exception {
                                 StudentPerformanceRow studentPerformanceRow = new StudentPerformanceRow();
-                                studentPerformanceRow.setStudent_id(tuple2Tuple2Tuple2._1()._1());
-                                studentPerformanceRow.setObjective_id(tuple2Tuple2Tuple2._1()._2());
-                                studentPerformanceRow.setObtained_score(tuple2Tuple2Tuple2._2()._1());
-                                studentPerformanceRow.setTotal_score(tuple2Tuple2Tuple2._2()._2());
+                                studentPerformanceRow.setA_student_id(tuple2Tuple2Tuple2._1()._1());
+                                studentPerformanceRow.setB_objective_id(tuple2Tuple2Tuple2._1()._2());
+                                studentPerformanceRow.setC_obtained_score(tuple2Tuple2Tuple2._2()._1());
+                                studentPerformanceRow.setD_total_score(tuple2Tuple2Tuple2._2()._2());
                                 return studentPerformanceRow;
                             }
                         });
 
                         // Create data frame and insert it into the destination table
                         DataFrame studentPerformanceFrame = hiveContext.createDataFrame(rowRDD, StudentPerformanceRow.class);
-                        //studentPerformanceFrame.show();
                         for (Row s : studentPerformanceFrame.collect()) {
                             System.out.println(s.toString());
                         }
                         studentPerformanceFrame.insertInto("student_performance");
-                        //studentPerformanceFrame.saveAsTable("simple_student_performance", "parquet", SaveMode.Append);
                         return null;
                     }
                 }
