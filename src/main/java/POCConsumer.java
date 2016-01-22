@@ -6,6 +6,7 @@ import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.Function2;
 import org.apache.spark.api.java.function.PairFlatMapFunction;
+import org.apache.spark.sql.Column;
 import org.apache.spark.sql.DataFrame;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.hive.HiveContext;
@@ -121,10 +122,10 @@ public class POCConsumer {
                         JavaRDD<StudentPerformanceRow> rowRDD = tuple2Tuple2JavaPairRDD.map(new Function<Tuple2<Tuple2<String, String>, Tuple2<Double, Double>>, StudentPerformanceRow>() {
                             public StudentPerformanceRow call(Tuple2<Tuple2<String, String>, Tuple2<Double, Double>> tuple2Tuple2Tuple2) throws Exception {
                                 StudentPerformanceRow studentPerformanceRow = new StudentPerformanceRow();
-                                studentPerformanceRow.setA_student_id(tuple2Tuple2Tuple2._1()._1());
-                                studentPerformanceRow.setB_objective_id(tuple2Tuple2Tuple2._1()._2());
-                                studentPerformanceRow.setC_obtained_score(tuple2Tuple2Tuple2._2()._1());
-                                studentPerformanceRow.setD_total_score(tuple2Tuple2Tuple2._2()._2());
+                                studentPerformanceRow.setStudentId(tuple2Tuple2Tuple2._1()._1());
+                                studentPerformanceRow.setObjectiveId(tuple2Tuple2Tuple2._1()._2());
+                                studentPerformanceRow.setObtainedScore(tuple2Tuple2Tuple2._2()._1());
+                                studentPerformanceRow.setTotalScore(tuple2Tuple2Tuple2._2()._2());
                                 return studentPerformanceRow;
                             }
                         });
@@ -134,7 +135,11 @@ public class POCConsumer {
                         for (Row s : studentPerformanceFrame.collect()) {
                             System.out.println(s.toString());
                         }
-                        studentPerformanceFrame.insertInto("student_performance");
+
+                        studentPerformanceFrame.select(new Column("studentId"),
+                                new Column("objectiveId"),
+                                new Column("obtainedScore"),
+                                new Column("totalScore")).insertInto("student_performance");
                         return null;
                     }
                 }

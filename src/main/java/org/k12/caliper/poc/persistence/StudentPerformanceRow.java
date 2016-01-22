@@ -1,5 +1,6 @@
 package org.k12.caliper.poc.persistence;
 
+import java.io.IOException;
 import java.io.Serializable;
 
 /**
@@ -7,43 +8,76 @@ import java.io.Serializable;
  * This is a simple serializable bean that maps to a row in the student_performance table created in hive.
  */
 public class StudentPerformanceRow implements Serializable {
-    private String a_student_id;
-    private String b_objective_id;
-    private double c_obtained_score;
-    private double d_total_score;
+    private String studentId;
+    private String objectiveId;
+    private double obtainedScore;
+    private double totalScore;
 
-    public String getA_student_id() {
-        return a_student_id;
+    public StudentPerformanceRow () {
+
+    };
+
+    public StudentPerformanceRow (String studentId,
+                                  String objectiveId,
+                                  double obtainedScore,
+                                  double totalScore) {
+        // Is this necessary?
+        this.studentId = studentId;
+        this.objectiveId = objectiveId;
+        this.obtainedScore = obtainedScore;
+        this.totalScore = totalScore;
     }
 
-    public void setA_student_id(String a_student_id) {
-        this.a_student_id = a_student_id;
+    public String getStudentId() {
+        return studentId;
     }
 
-    public String getB_objective_id() {
-        return b_objective_id;
+    public void setStudentId(String studentId) {
+        this.studentId = studentId;
     }
 
-    public void setB_objective_id(String b_objective_id) {
-        this.b_objective_id = b_objective_id;
+    public String getObjectiveId() {
+        return objectiveId;
     }
 
-    public double getC_obtained_score() {
-        return c_obtained_score;
+    public void setObjectiveId(String objectiveId) {
+        this.objectiveId = objectiveId;
     }
 
-    public void setC_obtained_score(double c_obtained_score) {
-        this.c_obtained_score = c_obtained_score;
+    public double getObtainedScore() {
+        return obtainedScore;
     }
 
-    public double getD_total_score() {
-        return d_total_score;
+    public void setObtainedScore(double obtainedScore) {
+        this.obtainedScore = obtainedScore;
     }
 
-    public void setD_total_score(double d_total_score) {
-        this.d_total_score = d_total_score;
+    public double getTotalScore() {
+        return totalScore;
     }
 
-    // TODO: look for a better way to force this order for the serialized fields
+    public void setTotalScore(double totalScore) {
+        this.totalScore = totalScore;
+    }
 
+    // There is really no need for implementing toString, writeObject or readObject
+
+    private void writeObject(java.io.ObjectOutputStream stream) throws IOException {
+        stream.writeObject(this.studentId);
+        stream.writeObject(this.objectiveId);
+        stream.writeDouble(this.obtainedScore);
+        stream.writeDouble(this.totalScore);
+    }
+
+    private void readObject(java.io.ObjectInputStream stream) throws IOException, ClassNotFoundException {
+        this.studentId = (String) stream.readObject();
+        this.objectiveId = (String) stream.readObject();
+        this.obtainedScore = stream.readDouble();
+        this.totalScore = stream.readDouble();
+    }
+
+    @Override
+    public String toString() {
+        return this.studentId + '\t' + this.objectiveId + '\t' + this.obtainedScore + '\t' + this.totalScore + '\t';
+    }
 }
